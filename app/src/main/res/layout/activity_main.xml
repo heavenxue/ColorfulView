@@ -7,6 +7,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:gravity="center"
+    xmlns:heima="http://schemas.android.com/apk/res-auto"
     tools:context="com.aibei.lixue.myheros.MainActivity">
 
     <!--<com.aibei.lixue.myheros.customeview.MyScrollView-->
@@ -42,4 +43,13 @@
        android:id="@+id/slidiingButton"
        android:layout_width="200dp"
        android:layout_height="50dp"/>
+    <!--<com.aibei.lixue.myheros.customeview.SlidingButtons-->
+        <!--android:id="@+id/slidiingButton"-->
+        <!--android:layout_width="wrap_content"-->
+        <!--android:layout_height="wrap_content"-->
+        <!--heima:ss_bg="@drawable/slide_switch_background"-->
+        <!--heima:ss_btn_bg="@drawable/slide_button_background"-->
+        <!--heima:ss_checked="false"-->
+        <!--/>-->
+    
 </LinearLayout>

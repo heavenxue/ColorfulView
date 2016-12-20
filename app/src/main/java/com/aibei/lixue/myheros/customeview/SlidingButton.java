@@ -39,13 +39,17 @@ import com.aibei.lixue.myheros.R;
 
 public class SlidingButton extends Button {
     private final static String TAG = SlidingButton.class.getSimpleName();
+    private final static int DEFAULT_WIDTH = 500;
+    private final static int DEFAULT_HEIGHT = 200;
     private Bitmap swithBitmap;
     private int marginLeft;//默认的滑动的icon的左间距
-    private int lastX;//上一个位置
+    private float lastX;//上一个位置
     private int currenX;//当前位置
-    private boolean isSlipping;//是否正在滑动
     private VelocityTracker mVelocityTracker;
     private OnSlidingEndListener onSlidingEndListener;
+    private int width;//此控件宽度
+    private int height;//此控件高度
+    private int maxOffset;//最大偏移量
 
     public SlidingButton(Context context) {
         super(context);
@@ -72,10 +76,16 @@ public class SlidingButton extends Button {
      */
     private void init(){
         //设置圆角背景
-        setBackground(getResources().getDrawable(R.drawable.slidingbg, null));
-//        bg = BitmapFactory.decodeResource(getResources(),R.drawable.slidingbg);
+        if (Build.VERSION.SDK_INT >= 21 ){
+            setBackground(getResources().getDrawable(R.drawable.slidingbg, null));
+        }else{
+            setBackground(getResources().getDrawable(R.drawable.slidingbg));
+        }
         swithBitmap = BitmapFactory.decodeResource(getResources(),R.drawable.slidingicon4);
         marginLeft = 30;
+        currenX = marginLeft;
+        Log.d(TAG,"width:" + width);
+        Log.d(TAG,"height:" + height);
     }
 
     @Override
@@ -84,26 +94,9 @@ public class SlidingButton extends Button {
         Paint mpaint = new Paint();
         mpaint.setAntiAlias(true);
         Log.d(TAG,"currentX:" + currenX);
-        if (isSlipping){
-            if (currenX > getWidth()){
-                currenX = getWidth();
-            }else if (currenX < getLeft()){
-                currenX = marginLeft;
-            }else if (currenX == 0){
-                currenX = marginLeft;
-            }
-        }else {
-            currenX = marginLeft;
-        }
-
-        //如果手指滑出了开关的范围，应当这样处理
-        if (currenX < 0) {
-            currenX = marginLeft;
-        } else if (currenX > getRight() - marginLeft) {
-            currenX = getRight() - swithBitmap.getWidth()/2;
-        }
-
-        canvas.drawBitmap(swithBitmap,currenX,25,mpaint);
+        canvas.drawBitmap(swithBitmap,currenX, 20 ,mpaint);
+        maxOffset = getWidth() - swithBitmap.getWidth();
+        Log.d(TAG,"maxOffset:" + maxOffset);
     }
 
     @Override
@@ -112,37 +105,45 @@ public class SlidingButton extends Button {
             mVelocityTracker = VelocityTracker.obtain();
         }
         mVelocityTracker.addMovement(event);
+        final float theX = event.getX();
 
         switch (event.getAction()){
             case MotionEvent.ACTION_DOWN:
-                lastX = (int) getX();
-                if (event.getX() > getWidth() || event.getY() > getHeight()){
-                    return false;
-                }else{
-                    if (getX() > 50){
-                        isSlipping = true;
-                        lastX = (int) event.getX();
-                        currenX = lastX;
-                    }
-                }
+                lastX = theX;
+                Log.d(TAG,"lastX:" + lastX);
                 break;
             case MotionEvent.ACTION_MOVE:
-                int movex = (int) getX();
-                int delayX = movex - lastX;
-                if (delayX > 50){//如果是向右滑动
-                    currenX = movex + lastX;
+                float movex = theX;
+                Log.d(TAG,"moveX:" + movex);
+                int delayX = (int)(movex - lastX + 0.5f);
+                currenX += delayX;
+                if (currenX < 0){
+                    currenX = marginLeft;
+                }
+                if (currenX > maxOffset){//超出右边边距
+                    currenX = maxOffset - marginLeft;
+                }
+                if (movex - lastX > 50) {//当滑向右动了一段距离后，再刷新
+                    invalidate();
                 }
                 break;
             case MotionEvent.ACTION_UP:
                 //如果现在手指刚刚离开屏幕状态
-                int upDelayX = (int)getX() - lastX;
-                if (upDelayX > 50) {//如果是向右滑动
+                if (currenX > maxOffset) {
+                    currenX = maxOffset;
+                }
+                if (currenX < marginLeft){
+                    currenX = maxOffset - marginLeft;
+                }
+                Log.d(TAG,"upx:" + theX+",lastx:" + lastX);
+                if (theX - lastX > 50){//当滑向右动了一段距离后，再注册事件
                     if (onSlidingEndListener != null){
                         onSlidingEndListener.OnSlidingEnd();
-                        isSlipping = false;
+                        currenX = marginLeft;
                     }
+                    invalidate();
                 }
-
+                break;
             default:
             if (mVelocityTracker != null) {
                 mVelocityTracker.recycle();
@@ -150,8 +151,28 @@ public class SlidingButton extends Button {
             }
             break;
         }
-        invalidate();
+
         return true;
+    }
+
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+        int widthMode = MeasureSpec.getMode(widthMeasureSpec);
+        int widthSize = MeasureSpec.getSize(widthMeasureSpec);
+        int heightMode = MeasureSpec.getMode(heightMeasureSpec);
+        int heigthSize = MeasureSpec.getSize(heightMeasureSpec);
+        if (widthMode == MeasureSpec.EXACTLY){
+            width = widthSize;
+        }else{
+            width = DEFAULT_WIDTH;
+        }
+        if (heightMode == MeasureSpec.EXACTLY){
+            height = heigthSize;
+        }else{
+            height = DEFAULT_HEIGHT;
+        }
+        setMeasuredDimension(width,height);
     }
 
     @Override
